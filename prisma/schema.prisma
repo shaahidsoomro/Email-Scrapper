@@ -1,0 +1,323 @@
+// Prisma schema for Quizzera
+// For full schema details, see DATABASE.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Core content models
+model Subject {
+  id           String   @id @default(uuid())
+  name         String   @unique
+  slug         String   @unique
+  description  String?
+  iconUrl      String?  @map("icon_url")
+  displayOrder Int      @default(0) @map("display_order")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  topics   Topic[]
+  quizzes  Quiz[]
+
+  @@map("subjects")
+}
+
+model Topic {
+  id           String   @id @default(uuid())
+  subjectId    String   @map("subject_id")
+  name         String
+  slug         String
+  description  String?
+  displayOrder Int      @default(0) @map("display_order")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  subject  Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  chapters Chapter[]
+  quizzes  Quiz[]
+
+  @@unique([subjectId, slug])
+  @@map("topics")
+}
+
+model Chapter {
+  id           String   @id @default(uuid())
+  topicId      String   @map("topic_id")
+  name         String
+  slug         String
+  description  String?
+  displayOrder Int      @default(0) @map("display_order")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  topic   Topic   @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  mcqs    MCQ[]
+  quizzes Quiz[]
+
+  @@unique([topicId, slug])
+  @@map("chapters")
+}
+
+model MCQ {
+  id                  String    @id @default(uuid())
+  questionText        String    @map("question_text") @db.Text
+  questionType        String    @default("single_choice") @map("question_type")
+  chapterId           String?   @map("chapter_id")
+  difficultyLevel     String    @default("medium") @map("difficulty_level")
+  marks               Decimal   @default(1.00) @db.Decimal(5, 2)
+  negativeMarks       Decimal   @default(0.00) @map("negative_marks") @db.Decimal(5, 2)
+  timeLimitSeconds    Int?      @map("time_limit_seconds")
+  explanation         String?   @db.Text
+  hint                String?   @db.Text
+  referenceText       String?   @map("reference_text") @db.Text
+  referenceUrl        String?   @map("reference_url")
+  imageUrl            String?   @map("image_url")
+  isVerified          Boolean   @default(false) @map("is_verified")
+  isActive            Boolean   @default(true) @map("is_active")
+  usageCount          Int       @default(0) @map("usage_count")
+  correctPercentage   Decimal?  @map("correct_percentage") @db.Decimal(5, 2)
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  createdById         String?   @map("created_by")
+  verifiedById        String?   @map("verified_by")
+
+  chapter         Chapter?        @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+  createdBy       User?           @relation("MCQCreatedBy", fields: [createdById], references: [id])
+  verifiedBy      User?           @relation("MCQVerifiedBy", fields: [verifiedById], references: [id])
+  options         Option[]
+  tags            MCQTag[]
+  quizMCQs        QuizMCQ[]
+  quizResponses   QuizResponse[]
+
+  @@map("mcqs")
+}
+
+model Option {
+  id           String   @id @default(uuid())
+  mcqId        String   @map("mcq_id")
+  optionText   String   @map("option_text") @db.Text
+  isCorrect    Boolean  @default(false) @map("is_correct")
+  displayOrder Int      @default(0) @map("display_order")
+  explanation  String?  @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  mcq MCQ @relation(fields: [mcqId], references: [id], onDelete: Cascade)
+
+  @@map("options")
+}
+
+model Tag {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  slug      String   @unique
+  category  String?
+  color     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  mcqs MCQTag[]
+
+  @@map("tags")
+}
+
+model MCQTag {
+  mcqId     String   @map("mcq_id")
+  tagId     String   @map("tag_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  mcq MCQ @relation(fields: [mcqId], references: [id], onDelete: Cascade)
+  tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([mcqId, tagId])
+  @@map("mcq_tags")
+}
+
+// User and Institution models
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  passwordHash      String?   @map("password_hash")
+  fullName          String    @map("full_name")
+  username          String?   @unique
+  role              String    @default("student")
+  phone             String?
+  profileImageUrl   String?   @map("profile_image_url")
+  institutionId     String?   @map("institution_id")
+  isActive          Boolean   @default(true) @map("is_active")
+  isEmailVerified   Boolean   @default(false) @map("is_email_verified")
+  lastLoginAt       DateTime? @map("last_login_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  institution       Institution?   @relation(fields: [institutionId], references: [id], onDelete: SetNull)
+  quizzesCreated    Quiz[]
+  quizAttempts      QuizAttempt[]
+  mcqsCreated       MCQ[]          @relation("MCQCreatedBy")
+  mcqsVerified      MCQ[]          @relation("MCQVerifiedBy")
+  subscriptions     Subscription[]
+
+  @@map("users")
+}
+
+model Institution {
+  id                   String    @id @default(uuid())
+  name                 String
+  slug                 String    @unique
+  type                 String?
+  address              String?   @db.Text
+  city                 String?
+  state                String?
+  country              String    @default("Pakistan")
+  postalCode           String?   @map("postal_code")
+  phone                String?
+  email                String?
+  website              String?
+  logoUrl              String?   @map("logo_url")
+  subscriptionPlan     String    @default("free") @map("subscription_plan")
+  subscriptionStatus   String    @default("active") @map("subscription_status")
+  studentLimit         Int       @default(100) @map("student_limit")
+  subscriptionStartDate DateTime? @map("subscription_start_date") @db.Date
+  subscriptionEndDate  DateTime? @map("subscription_end_date") @db.Date
+  isActive             Boolean   @default(true) @map("is_active")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  users          User[]
+  quizzes        Quiz[]
+  subscriptions  Subscription[]
+
+  @@map("institutions")
+}
+
+// Quiz models
+model Quiz {
+  id                      String    @id @default(uuid())
+  title                   String
+  slug                    String
+  description             String?   @db.Text
+  quizType                String    @default("practice") @map("quiz_type")
+  subjectId               String?   @map("subject_id")
+  topicId                 String?   @map("topic_id")
+  chapterId               String?   @map("chapter_id")
+  totalMarks              Decimal?  @map("total_marks") @db.Decimal(8, 2)
+  passingMarks            Decimal?  @map("passing_marks") @db.Decimal(8, 2)
+  durationMinutes         Int?      @map("duration_minutes")
+  negativeMarking         Boolean   @default(false) @map("negative_marking")
+  negativeMarksPerQuestion Decimal  @default(0.00) @map("negative_marks_per_question") @db.Decimal(5, 2)
+  shuffleQuestions        Boolean   @default(true) @map("shuffle_questions")
+  shuffleOptions          Boolean   @default(true) @map("shuffle_options")
+  showResultsImmediately  Boolean   @default(true) @map("show_results_immediately")
+  allowReview             Boolean   @default(true) @map("allow_review")
+  isPublic                Boolean   @default(true) @map("is_public")
+  institutionId           String?   @map("institution_id")
+  createdById             String    @map("created_by")
+  isActive                Boolean   @default(true) @map("is_active")
+  scheduledAt             DateTime? @map("scheduled_at")
+  expiresAt               DateTime? @map("expires_at")
+  maxAttempts             Int       @default(0) @map("max_attempts")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  subject      Subject?      @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  topic        Topic?        @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  chapter      Chapter?      @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+  institution  Institution?  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  createdBy    User          @relation(fields: [createdById], references: [id])
+  quizMCQs     QuizMCQ[]
+  attempts     QuizAttempt[]
+
+  @@map("quizzes")
+}
+
+model QuizMCQ {
+  id          String   @id @default(uuid())
+  quizId      String   @map("quiz_id")
+  mcqId       String   @map("mcq_id")
+  questionOrder Int    @map("question_order")
+  customMarks Decimal? @map("custom_marks") @db.Decimal(5, 2)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  mcq  MCQ  @relation(fields: [mcqId], references: [id], onDelete: Cascade)
+
+  @@unique([quizId, mcqId])
+  @@unique([quizId, questionOrder])
+  @@map("quiz_mcqs")
+}
+
+model QuizAttempt {
+  id              String    @id @default(uuid())
+  quizId          String    @map("quiz_id")
+  userId          String    @map("user_id")
+  attemptNumber   Int       @default(1) @map("attempt_number")
+  status          String    @default("in_progress")
+  startedAt       DateTime  @default(now()) @map("started_at")
+  submittedAt     DateTime? @map("submitted_at")
+  timeTakenSeconds Int?     @map("time_taken_seconds")
+  score           Decimal?  @db.Decimal(8, 2)
+  percentage      Decimal?  @db.Decimal(5, 2)
+  passed          Boolean?
+  totalQuestions  Int?      @map("total_questions")
+  correctAnswers  Int?      @map("correct_answers")
+  wrongAnswers    Int?      @map("wrong_answers")
+  unanswered      Int?
+  ipAddress       String?   @map("ip_address")
+  userAgent       String?   @map("user_agent") @db.Text
+
+  quiz      Quiz           @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  responses QuizResponse[]
+
+  @@map("quiz_attempts")
+}
+
+model QuizResponse {
+  id                  String    @id @default(uuid())
+  attemptId           String    @map("attempt_id")
+  mcqId               String    @map("mcq_id")
+  selectedOptionIds   String[]  @map("selected_option_ids")
+  isCorrect           Boolean?  @map("is_correct")
+  marksObtained       Decimal?  @map("marks_obtained") @db.Decimal(5, 2)
+  timeTakenSeconds    Int?      @map("time_taken_seconds")
+  isMarkedForReview   Boolean   @default(false) @map("is_marked_for_review")
+  answeredAt          DateTime? @map("answered_at")
+
+  attempt QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  mcq     MCQ         @relation(fields: [mcqId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, mcqId])
+  @@map("quiz_responses")
+}
+
+// Subscription model
+model Subscription {
+  id             String    @id @default(uuid())
+  userId         String?   @map("user_id")
+  institutionId  String?   @map("institution_id")
+  planType       String    @map("plan_type")
+  planName       String?   @map("plan_name")
+  status         String    @default("active")
+  amount         Decimal?  @db.Decimal(10, 2)
+  currency       String    @default("PKR")
+  billingCycle   String?   @map("billing_cycle")
+  startDate      DateTime  @map("start_date") @db.Date
+  endDate        DateTime? @map("end_date") @db.Date
+  autoRenew      Boolean   @default(true) @map("auto_renew")
+  paymentMethod  String?   @map("payment_method")
+  transactionId  String?   @map("transaction_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  institution Institution? @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
