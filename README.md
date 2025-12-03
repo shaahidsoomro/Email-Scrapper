@@ -38,8 +38,8 @@ Quizzera is Pakistan's most powerful MCQ bank, online testing, and exam engine d
 
 ```bash
 # Clone the repository
-git clone https://github.com/shaahidsoomro/Email-Scrapper.git
-cd Email-Scrapper
+git clone https://github.com/shaahidsoomro/quizzera.git
+cd quizzera
 
 # Install dependencies
 npm install

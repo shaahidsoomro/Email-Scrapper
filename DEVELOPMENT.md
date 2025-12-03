@@ -15,8 +15,8 @@ Before you begin, ensure you have the following installed:
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/shaahidsoomro/Email-Scrapper.git
-   cd Email-Scrapper
+   git clone https://github.com/shaahidsoomro/quizzera.git
+   cd quizzera
    ```
 
 2. **Install Dependencies**
