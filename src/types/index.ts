@@ -40,9 +40,15 @@ export interface Quiz {
   slug: string
   description?: string
   quizType: QuizType
+  subjectId?: string
+  topicId?: string
+  chapterId?: string
   totalMarks?: number
   passingMarks?: number
   durationMinutes?: number
+  negativeMarking: boolean
+  shuffleQuestions: boolean
+  shuffleOptions: boolean
   isPublic: boolean
   createdAt: Date
   updatedAt: Date
