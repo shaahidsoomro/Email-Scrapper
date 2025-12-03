@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { DifficultyLevel } from '@/types'
 
 interface QuizCardProps {
   id: string
@@ -7,7 +8,7 @@ interface QuizCardProps {
   description: string
   totalQuestions: number
   duration?: number
-  difficulty?: 'easy' | 'medium' | 'hard'
+  difficulty?: DifficultyLevel
   onStart?: () => void
 }
 
@@ -39,12 +40,12 @@ export function QuizCard({
       <CardContent>
         <div className="flex gap-4 text-sm text-secondary">
           <div className="flex items-center gap-1">
-            <span>📝</span>
+            <span aria-label="Questions">📝</span>
             <span>{totalQuestions} Questions</span>
           </div>
           {duration && (
             <div className="flex items-center gap-1">
-              <span>⏱️</span>
+              <span aria-label="Duration">⏱️</span>
               <span>{duration} min</span>
             </div>
           )}

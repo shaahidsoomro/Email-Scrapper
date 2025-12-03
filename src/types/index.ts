@@ -47,9 +47,13 @@ export interface Quiz {
   passingMarks?: number
   durationMinutes?: number
   negativeMarking: boolean
+  negativeMarksPerQuestion: number
   shuffleQuestions: boolean
   shuffleOptions: boolean
+  showResultsImmediately: boolean
+  allowReview: boolean
   isPublic: boolean
+  maxAttempts: number
   createdAt: Date
   updatedAt: Date
 }
